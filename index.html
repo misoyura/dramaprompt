@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 숏드라마 만들기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --ink:#151a2d; --sub:#5b6178; --line:#e3e6ef;
+    --gpt:#10a37f; --gpt-soft:#e6f6f1; --flow:#4f6bff; --flow-soft:#eaeeff;
+    --warn:#e8590c; --warn-soft:#fff2e8; --code:#11152a; --code-ink:#e8ebf7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",system-ui,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto;padding:0 16px 80px}
+
+  /* hero */
+  header.hero{background:linear-gradient(135deg,#151a2d 0%,#2b3470 60%,#4f6bff 100%);color:#fff;padding:56px 16px 64px;text-align:center}
+  .hero .tag{display:inline-block;font-size:13px;font-weight:700;letter-spacing:.08em;background:rgba(255,255,255,.14);padding:6px 14px;border-radius:999px}
+  .hero h1{font-size:clamp(30px,6vw,46px);font-weight:900;margin:16px 0 8px;letter-spacing:-.02em}
+  .hero p{margin:0;opacity:.85;font-size:16px}
+
+  /* flow */
+  .flow{background:var(--card);border-radius:20px;box-shadow:0 10px 30px rgba(21,26,45,.08);padding:24px;margin-top:-36px;position:relative}
+  .flow h2{font-size:15px;margin:0 0 16px;color:var(--sub);font-weight:700}
+  .flow-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+  .node{flex:1 0 110px;border-radius:14px;padding:12px 10px;text-align:center;font-size:13px}
+  .node b{display:block;font-size:14px;margin-top:2px}
+  .node small{display:block;color:var(--sub);font-size:12px}
+  .node.gpt{background:var(--gpt-soft)} .node.gpt .tool{color:var(--gpt)}
+  .node.flw{background:var(--flow-soft)} .node.flw .tool{color:var(--flow)}
+  .tool{font-weight:700;font-size:12px}
+  .flow-note{margin:14px 0 0;font-size:14px;color:var(--sub)}
+  .flow-note strong{color:var(--ink)}
+
+  /* steps */
+  .step{background:var(--card);border-radius:20px;border:1px solid var(--line);padding:26px 24px;margin-top:22px}
+  .step-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+  .num{font-size:12px;font-weight:900;letter-spacing:.1em;color:#fff;background:var(--ink);border-radius:8px;padding:4px 10px}
+  .step h3{margin:0;font-size:20px;font-weight:900;letter-spacing:-.01em}
+  .badge{margin-left:auto;font-size:12px;font-weight:700;padding:4px 12px;border-radius:999px}
+  .badge.gpt{background:var(--gpt-soft);color:var(--gpt)} .badge.flw{background:var(--flow-soft);color:var(--flow)}
+
+  .path{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:10px 0}
+  .path span{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:14px;font-weight:500}
+  .path span.key{border-color:var(--warn);color:var(--warn);font-weight:700;background:var(--warn-soft)}
+  .path i{font-style:normal;color:var(--sub)}
+  .desc{margin:8px 0;font-size:15px}
+
+  .alert{background:var(--warn-soft);border-left:4px solid var(--warn);border-radius:10px;padding:12px 14px;font-size:14px;margin-top:14px}
+
+  /* copy blocks */
+  .copy{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:12px}
+  .copy-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--line)}
+  .copy-top span{font-size:14px;font-weight:700}
+  .btn{border:0;background:var(--ink);color:#fff;font-family:inherit;font-size:13px;font-weight:700;padding:7px 14px;border-radius:9px;cursor:pointer;white-space:nowrap}
+  .btn:hover{opacity:.88} .btn.done{background:var(--gpt)}
+  pre{margin:0;background:var(--code);color:var(--code-ink);padding:16px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:keep-all;max-height:340px;overflow:auto;font-family:"Noto Sans KR",monospace}
+  details.long summary{cursor:pointer;padding:10px 14px;font-size:13px;color:var(--sub);background:var(--bg);list-style:none}
+  details.long[open] summary{display:none}
+
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
+  .chip{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:500;background:#fff}
+
+  .repeat{text-align:center;margin-top:26px;padding:20px;border:2px dashed var(--line);border-radius:18px;color:var(--sub);font-size:15px}
+  .repeat b{color:var(--ink)}
+
+  footer{text-align:center;color:var(--sub);font-size:13px;margin-top:40px}
+
+  @media (max-width:520px){
+    .step{padding:22px 16px}
+    .badge{margin-left:0}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <span class="tag">ChatGPT × Google Flow</span>
+  <h1>AI 숏드라마 만들기</h1>
+  <p>기획부터 컷 영상까지, 30초 세로 드라마 한 편 완성하기</p>
+</header>
+
+<main class="wrap">
+
+  <section class="flow">
+    <h2>한눈에 보는 작업 순서</h2>
+    <div class="flow-row">
+      <div class="node gpt"><span class="tool">ChatGPT</span><b>프로젝트 세팅</b><small>지침 붙여넣기</small></div>
+      <div class="node gpt"><span class="tool">ChatGPT</span><b>기획·대본</b><small>장르 → 아이디어 → 대본</small></div>
+      <div class="node flw"><span class="tool">Flow</span><b>캐릭터 시트</b><small>16:9</small></div>
+      <div class="node flw"><span class="tool">Flow</span><b>컷 이미지</b><small>9:16</small></div>
+      <div class="node flw"><span class="tool">Flow</span><b>컷 영상</b><small>9:16 · 10초</small></div>
+    </div>
+    <p class="flow-note"><strong>ChatGPT</strong>는 글(프롬프트)을 쓰고, <strong>Flow</strong>는 그림과 영상을 만듭니다.</p>
+  </section>
+
+  <!-- STEP 1 -->
+  <section class="step">
+    <div class="step-head"><span class="num">STEP 1</span><h3>프로젝트 만들고 지침 넣기</h3><span class="badge gpt">ChatGPT</span></div>
+    <div class="path"><span>새 프로젝트</span><i>→</i><span>프로젝트 설정(⋯)</span><i>→</i><span class="key">지침</span></div>
+    <p class="desc">아래 지침을 복사해 <b>지침 칸</b>에 붙여넣고 저장하세요.</p>
+
+    <div class="copy">
+      <div class="copy-top"><span>📋 숏드라마 제작 도우미 지침</span><button class="btn" data-copy="guide">복사</button></div>
+      <details class="long"><summary>지침 전체 보기 ▾</summary>
+<pre id="guide">[나의 역할]
+당신은 30초 세로형 숏드라마를 함께 만드는 제작 파트너입니다.
+기획자, 대본 작가, 촬영감독의 시선으로 사용자를 돕고,
+결과물은 Google Flow에 그대로 붙여 넣을 수 있는 프롬프트로 정리합니다.
+
+[작품 규격]
+· 길이: 총 30초 (10초 컷 3개가 기본, 꼭 필요할 때만 4컷)
+· 화면: 컷 이미지·영상은 세로 9:16 / 캐릭터 시트는 가로 16:9
+· 톤: 실사 느낌의 한국 드라마, 자연스러운 조명과 표정 연기
+· 구성: 처음 3초 안에 시선을 붙잡고, 마지막은 반전·여운·웃음 중 하나로 마무리
+· 대사: 일상적인 한국어, 10초 안에 말할 수 있는 분량
+
+[진행 원칙]
+1. 한 번에 한 단계만 진행하고, 사용자가 고르거나 "확정"이라고 하면 다음으로 넘어갑니다.
+2. 앞에서 정한 인물·의상·장소·대사는 끝까지 바꾸지 않습니다.
+3. 이미지나 영상을 직접 만들지 말고, 프롬프트만 작성합니다.
+4. 프롬프트는 반드시 코드블록에 넣어 복사하기 쉽게 합니다.
+5. 설명은 짧게, 프롬프트는 구체적으로 씁니다.
+
+[단계별 안내]
+① 장르 고르기
+  "시작"이라고 하면 아래 장르를 번호로 보여주고 하나를 고르게 합니다.
+  1) 일상 공감   2) 통쾌한 반전   3) 설레는 로맨스
+  4) 시간여행·사극   5) 유쾌한 코미디
+
+② 아이디어 3개
+  고른 장르로 서로 다른 아이디어 3개를 제안합니다.
+  각 아이디어: 제목 / 한 줄 줄거리 / 첫 3초 장면 / 결말
+  등장인물 2~3명, 장소 1~2곳으로 제한합니다.
+
+③ 대본
+  선택한 아이디어로 컷별 대본을 씁니다.
+  컷마다: 시간 / 장소 / 첫 화면 / 행동과 표정 / 대사(인물·감정 표시) / 카메라
+  마지막에 컷별 시간 합계와 대사 길이가 적당한지 확인합니다.
+
+④ 캐릭터 시트
+  등장인물마다 하나씩 이미지 프롬프트를 씁니다.
+  흰 배경, 같은 인물의 정면·옆모습·상반신·전신을 한 장에 담고,
+  나이·얼굴·헤어·의상을 구체적으로 적습니다. (16:9)
+
+⑤ 컷 이미지
+  해당 컷이 시작되는 첫 장면을 그리는 프롬프트를 씁니다.
+  캐릭터 시트와 같은 얼굴·의상을 유지하고, 자막·글자는 넣지 않습니다. (9:16)
+
+⑥ 컷 영상
+  컷 이미지를 첫 프레임으로 쓰는 10초 영상 프롬프트를 씁니다.
+  0~3초 / 3~7초 / 7~10초로 나누어 행동, 카메라, 대사를 적고
+  누가 말하는지 분명히 표시합니다. (9:16)
+
+[바로 쓰는 말]
+시작 → 장르 고르기
+다른 아이디어 → 같은 장르로 새 아이디어 3개
+캐릭터 시트 → 인물별 시트 프롬프트
+컷 1 프롬프트 → 컷 1 이미지 + 영상 프롬프트
+다음 컷 → 다음 컷 이미지 + 영상 프롬프트
+고쳐줘 → 방금 쓴 프롬프트 수정본
+
+[답변 방식]
+모든 설명은 친절한 존댓말로, 프롬프트 안의 문장은 "~해줘" 형태로 씁니다.</pre>
+      </details>
+    </div>
+  </section>
+
+  <!-- STEP 2 -->
+  <section class="step">
+    <div class="step-head"><span class="num">STEP 2</span><h3>기획하고 대본 확정하기</h3><span class="badge gpt">ChatGPT</span></div>
+    <p class="desc">프로젝트 안에서 새 채팅을 열고 아래 말로 시작하세요.</p>
+    <div class="chips">
+      <div class="chip">시작 <button class="btn" data-text="시작">복사</button></div>
+    </div>
+    <div class="path"><span>장르 선택</span><i>→</i><span>아이디어 고르기</span><i>→</i><span>대본 확정</span></div>
+    <p class="desc">대본이 마음에 들면 아래 말로 이어가세요.</p>
+    <div class="chips">
+      <div class="chip">캐릭터 시트 <button class="btn" data-text="캐릭터 시트">복사</button></div>
+      <div class="chip">컷 1 프롬프트 <button class="btn" data-text="컷 1 프롬프트">복사</button></div>
+    </div>
+  </section>
+
+  <!-- STEP 3 -->
+  <section class="step">
+    <div class="step-head"><span class="num">STEP 3</span><h3>캐릭터 시트 만들기</h3><span class="badge flw">Flow</span></div>
+    <div class="path"><span>이미지</span><i>→</i><span class="key">16:9</span><i>→</i><span>1장</span></div>
+    <p class="desc">ChatGPT가 써 준 <b>캐릭터 시트 프롬프트</b>를 붙여넣고 생성하세요.<br>등장인물 수만큼 반복합니다.</p>
+  </section>
+
+  <!-- STEP 4 -->
+  <section class="step">
+    <div class="step-head"><span class="num">STEP 4</span><h3>컷 이미지 만들기</h3><span class="badge flw">Flow</span></div>
+    <div class="path"><span>이미지</span><i>→</i><span class="key">9:16</span><i>→</i><span>재료에 캐릭터 시트 추가</span></div>
+    <p class="desc"><b>컷 1 이미지 프롬프트</b>를 붙여넣고 생성하세요.</p>
+    <div class="alert">⚠️ 비율이 16:9로 남아 있으면 가로 화면이 나옵니다. 생성 전에 <b>9:16</b>인지 꼭 확인하세요.</div>
+  </section>
+
+  <!-- STEP 5 -->
+  <section class="step">
+    <div class="step-head"><span class="num">STEP 5</span><h3>컷 영상 만들기</h3><span class="badge flw">Flow</span></div>
+    <div class="path"><span>동영상</span><i>→</i><span>9:16</span><i>→</i><span>10초</span><i>→</i><span class="key">1개</span></div>
+    <div class="path"><span>시작 프레임에 컷 1 이미지 추가</span></div>
+    <p class="desc"><b>컷 1 영상 프롬프트</b>를 붙여넣고 생성하세요.</p>
+    <div class="alert">💡 생성 개수는 <b>1개</b>로 두세요. 개수만큼 크레딧이 차감됩니다.</div>
+  </section>
+
+  <div class="repeat">
+    컷 2 · 컷 3도 같은 순서로 반복하세요<br>
+    <b>ChatGPT "다음 컷" → Flow 컷 이미지 → Flow 컷 영상</b>
+  </div>
+
+  <footer>AI 숏드라마 만들기 실습 가이드</footer>
+</main>
+
+<script>
+  function flash(btn){
+    const t = btn.textContent;
+    btn.textContent = '복사됨 ✓'; btn.classList.add('done');
+    setTimeout(()=>{ btn.textContent = t; btn.classList.remove('done'); }, 1500);
+  }
+  async function copyText(text, btn){
+    try { await navigator.clipboard.writeText(text); }
+    catch(e){
+      const ta = document.createElement('textarea'); ta.value = text;
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+    }
+    flash(btn);
+  }
+  document.querySelectorAll('.btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const id = btn.dataset.copy;
+      const text = id ? document.getElementById(id).textContent : btn.dataset.text;
+      copyText(text, btn);
+    });
+  });
+</script>
+</body>
+</html>
